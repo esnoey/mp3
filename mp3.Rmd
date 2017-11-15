@@ -17,4 +17,4 @@ library(RMySQL)
 db <- dbConnect_scidb(dbname = "imdb")
 ```
 
-Problem Statement: 
+Problem Statement: Are sequels more common today than they used to be?
