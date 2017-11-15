@@ -18,3 +18,12 @@ db <- dbConnect_scidb(dbname = "imdb")
 ```
 
 Problem Statement: Are sequels more common today than they used to be?
+
+```{r}
+# find any movies that are denoted sequels by the use of "2"
+db %>%
+  dbGetQuery("SELECT * 
+            FROM title
+            WHERE kind_id IN (1,3,4)
+            AND title LIKE '%_ 2';")"
+```
