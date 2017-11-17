@@ -37,3 +37,14 @@ db %>%
             AND title LIKE '%_ 3';")
 
 ```
+
+```{r}
+#JOIN title with movie_link table table and filter by movies that are sequels (follows)
+db %>%
+  dbGetQuery("SELECT *
+            FROM imdb.movie_link ml
+            JOIN title t ON ml.linked_movie_id = t.id
+            WHERE ml.link_type_id = 1
+            AND kind_id IN (1,3);")
+```
+
