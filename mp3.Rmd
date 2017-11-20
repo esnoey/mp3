@@ -48,3 +48,14 @@ db %>%
             AND kind_id IN (1,3);")
 ```
 
+```{r}
+#JOIN title with movie_link table table and filter by movies that are reboots or remakes
+db %>%
+  dbGetQuery("SELECT *
+            FROM imdb.movie_link ml
+            JOIN title t ON ml.linked_movie_id = t.id
+            WHERE ml.link_type_id IN (3,4)
+            AND kind_id IN (1,3);")
+```
+
+
