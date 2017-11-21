@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #install.packages("mdsr")
 library(mdsr)
 library(RMySQL)
+library(ggplot2)
 db <- dbConnect_scidb(dbname = "imdb")
 ```
 
@@ -41,21 +42,102 @@ db %>%
 ```{r}
 #JOIN title with movie_link table table and filter by movies that are sequels (follows)
 db %>%
+  dbGetQuery("SELECT COUNT(*)
+            FROM imdb.movie_link ml
+            JOIN title t ON ml.linked_movie_id = t.id
+            WHERE ml.link_type_id = 1
+            AND kind_id IN (1,3)
+            GROUP BY production_year;")
+```
+```{r}
+#write a query to count the number of movies made each year
+db %>%
+  dbGetQuery("SELECT COUNT(production_year) 
+              FROM imdb.title
+              WHERE kind_id IN (1,3)
+              GROUP BY production_year;")
+```
+
+```{r}
+dbsequels1 <- db %>%
   dbGetQuery("SELECT *
             FROM imdb.movie_link ml
             JOIN title t ON ml.linked_movie_id = t.id
             WHERE ml.link_type_id = 1
             AND kind_id IN (1,3);")
-```
 
-```{r}
-#JOIN title with movie_link table table and filter by movies that are reboots or remakes
-db %>%
+#This works assuming we don't need either id columns
+dbsequels1$id <- NULL
+
+sequels <- dbsequels1 %>%
+  group_by(production_year) %>%
+  summarise(total_movies = n())
+
+dbreboot <- db %>%
   dbGetQuery("SELECT *
             FROM imdb.movie_link ml
             JOIN title t ON ml.linked_movie_id = t.id
             WHERE ml.link_type_id IN (3,4)
             AND kind_id IN (1,3);")
+
+dbreboot$id <- NULL
+
+reboots <-dbreboot %>%
+  group_by(production_year) %>%
+  summarise(total_movies = n())
 ```
 
+```{r}
+#LINE PLOT
+ggplot() +
+  geom_line(data=sequels, aes(x = production_year, y = total_movies, color = "Sequels", size = "2")) +
+  geom_line(data=reboots, aes(x = production_year, y = total_movies, color = "Reboots", size = "2")) +
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) 
+#color isn't perfect
+  
+#################################################################
 
+#BAR PLOT
+ggplot()+
+  geom_col(data=sequels, aes(x=production_year, y=total_movies),fill="red", position = "dodge")+
+  geom_col(data=reboots, aes(x=production_year, y=total_movies),fill = "blue", position = "dodge")
+
+#problem is the two comparison variables(sequels vs reboots) need to be in same data frame,
+#and then you plot by color and position = dodge to get side by side bars
+```
+
+**PERCENT PLOT**
+Find the number of sequels in a given year:
+```{r}
+library(sqldf)
+justsequels <- db %>%
+  dbGetQuery("SELECT COUNT(DISTINCT linked_movie_id), production_year
+              FROM imdb.movie_link ml
+              JOIN title t ON ml.linked_movie_id = t.id
+              WHERE ml.link_type_id = 1
+              AND kind_id IN (1,3)
+              GROUP BY production_year;")
+```
+
+Find the number of all movies in one year:
+```{r}
+allmovies <- db %>%
+  dbGetQuery("SELECT COUNT(DISTINCT linked_movie_id), production_year 
+            FROM imdb.movie_link ml
+            JOIN title t ON ml.linked_movie_id = t.id
+            WHERE kind_id IN (1,3)
+            GROUP BY production_year;")
+```
+
+```{r}
+# tried 2 different things, struggling to get a successful table merge
+#1
+#library(dplyr)
+#merge(allmovies, justsequels)
+
+#2
+#allmovies %>%
+#  dbGetQuery("SELECT *
+#             FROM allmovies
+#              JOIN justsequels USING(production_year);")
+```
